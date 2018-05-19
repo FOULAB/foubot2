@@ -14,6 +14,9 @@ import (
 	"../go-i2c"
 )
 
+const StatusEndPoint = configuration.StatusEndPoint
+const BotChannel = configuration.BotChannel
+
 type fn func(string, string)
 
 var stateMap = map[byte]bool{
@@ -45,7 +48,6 @@ func GetSwitchStatus() (status bool) {
 func processStatus(ss *SWITCHSTATE, nc *http.Client, callback fn) {
 	state := GetSwitchStatus()
 	strTopic, strStatus := "", ""
-	tgtURL := "https://foulab.org/YTDMOWI3N2MXNMEZYWE4MGRHYTRLMZC4NJU5MJI2ZJYYODMYNME5NSAGLQO/"
 	hold := []string{}
 
 	for {
@@ -68,11 +70,11 @@ func processStatus(ss *SWITCHSTATE, nc *http.Client, callback fn) {
 
 					strTopic = fmt.Sprintf("%s|| LAB %s ||%s", hold[0], strStatus, hold[2])
 
-					resp, _ := nc.Get(tgtURL + strStatus)
+					resp, _ := nc.Get(StatusEndPoint + strStatus)
 					io.Copy(ioutil.Discard, resp.Body)
 					resp.Body.Close()
 
-					callback(configuration.BotChannel, strTopic)
+					callback(BotChannel, strTopic)
 				}
 			}
 			time.Sleep(time.Second)
