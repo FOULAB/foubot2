@@ -303,16 +303,15 @@ func (irc *Connection) Privmsg(target, message string) {
 	irc.pwrite <- fmt.Sprintf("PRIVMSG %s :%s\r\n", target, message)
 }
 
-
 // Send formated string to specified target (channel or nickname).
 func (irc *Connection) Privmsgf(target, format string, a ...interface{}) {
 	irc.Privmsg(target, fmt.Sprintf(format, a...))
 }
 
 func (irc *Connection) Topic(channel string, message string) {
-     	if message == "" {
-	   irc.pwrite <- fmt.Sprintf("TOPIC %s\r\n", channel)
-	   return
+	if message == "" {
+		irc.pwrite <- fmt.Sprintf("TOPIC %s\r\n", channel)
+		return
 	}
 	irc.pwrite <- fmt.Sprintf("TOPIC %s :%s\r\n", channel, message)
 }

@@ -15,7 +15,6 @@ import (
 	"syscall"
 )
 
-
 const (
 	I2C_SLAVE = 0x0703
 )
