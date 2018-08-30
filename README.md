@@ -1,6 +1,6 @@
 To compile for foubot's hardware, set the following:
 
-	export GOARCH=arm; export GOARM=5;
+	export GOARCH=arm GOARM=5 GOOS=linux
 
 _using go 1.10_
 
