@@ -57,22 +57,20 @@ func GetSwitchStatus() (status bool) {
 }
 
 func processStatus(ss *SWITCHSTATE, nc *http.Client, callback fn) {
-	state := GetSwitchStatus()
-	strTopic, strStatus := "", ""
-	hold := []string{}
-
 	for {
 		select {
 		case <-ss.ChStop:
 			break
 		default:
-			state = GetSwitchStatus()
+			state := GetSwitchStatus()
 			if state != ss.Status {
 				ss.Status = state
-				strTopic = ss.Topic
+				strTopic := ss.Topic
 				match, _ := regexp.MatchString("\\|\\| LAB (OPEN|CLOSED) \\|\\|", strTopic)
 				if match {
-					hold = strings.Split(strTopic, "||")
+					hold := strings.Split(strTopic, "||")
+
+					var strStatus string
 					if state {
 						strStatus = "OPEN"
 					} else {
