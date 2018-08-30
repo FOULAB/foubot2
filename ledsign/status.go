@@ -57,6 +57,9 @@ func GetSwitchStatus() (status bool) {
 }
 
 func processStatus(ss *SWITCHSTATE, nc *http.Client, callback fn) {
+	state := GetSwitchStatus()
+	log.Printf("Starting status: %v\n", state)
+
 	for {
 		select {
 		case <-ss.ChStop:
@@ -64,6 +67,7 @@ func processStatus(ss *SWITCHSTATE, nc *http.Client, callback fn) {
 		default:
 			state := GetSwitchStatus()
 			if state != ss.Status {
+				log.Printf("New status: %v\n", state)
 				ss.Status = state
 				strTopic := ss.Topic
 				match, _ := regexp.MatchString("\\|\\| LAB (OPEN|CLOSED) \\|\\|", strTopic)
