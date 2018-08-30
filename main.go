@@ -99,9 +99,11 @@ func main() {
 	irccon.VerboseCallbackHandler = false
 	irccon.Debug = false
 	irccon.UseTLS = true
-	irccon.UseSASL = true
-	irccon.SASLLogin = botNick
-	irccon.SASLPassword = botPswd
+	if botPswd != "" {
+		irccon.UseSASL = true
+		irccon.SASLLogin = botNick
+		irccon.SASLPassword = botPswd
+	}
 	irccon.TLSConfig = &tls.Config{InsecureSkipVerify: true}
 
 	leds, err := ledsign.NewLEDSign()
@@ -120,7 +122,7 @@ func main() {
 
 	err = irccon.Connect(servertls)
 	if err != nil {
-		fmt.Printf("Err %s", err)
+		fmt.Printf("Connect error: %s\n", err)
 		irccon.Quit()
 		return
 	}
