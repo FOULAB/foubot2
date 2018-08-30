@@ -83,9 +83,13 @@ func processStatus(ss *SWITCHSTATE, nc *http.Client, callback fn) {
 
 					strTopic = fmt.Sprintf("%s|| LAB %s ||%s", hold[0], strStatus, hold[2])
 
-					resp, _ := nc.Get(StatusEndPoint + strStatus)
-					io.Copy(ioutil.Discard, resp.Body)
-					resp.Body.Close()
+					resp, err := nc.Get(StatusEndPoint + strStatus)
+					if err != nil {
+						log.Printf("StatusEndPoint error: %s\n", err)
+					} else {
+						io.Copy(ioutil.Discard, resp.Body)
+						resp.Body.Close()
+					}
 
 					callback(BotChannel, strTopic)
 				}
