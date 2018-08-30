@@ -24,6 +24,8 @@ var stateMap = map[byte]bool{
 	0x01: true,
 }
 
+var I2CMu sync.Mutex
+
 type SWITCHSTATE struct {
 	Status bool
 	ChStop chan struct{}
@@ -32,6 +34,9 @@ type SWITCHSTATE struct {
 }
 
 func GetSwitchStatus() (status bool) {
+	I2CMu.Lock()
+	defer I2CMu.Unlock()
+
 	smb, err := i2c.NewI2C(0x71, 0)
 	if err != nil {
 		return
