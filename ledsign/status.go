@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"regexp"
 	"strings"
@@ -39,6 +40,7 @@ func GetSwitchStatus() (status bool) {
 
 	smb, err := i2c.NewI2C(0x71, 0)
 	if err != nil {
+		log.Printf("STATUS NewI2C error: %s\n", err)
 		return
 	}
 	smb.Debug = false
@@ -46,6 +48,10 @@ func GetSwitchStatus() (status bool) {
 
 	state := make([]byte, 1)
 	_, err = smb.ReadBytes(state)
+	if err != nil {
+		log.Printf("STATUS ReadBytes error: %s\n", err)
+		return
+	}
 
 	return stateMap[state[0]]
 }
