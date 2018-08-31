@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"regexp"
 	"strings"
@@ -24,6 +25,8 @@ var stateMap = map[byte]bool{
 	0x01: true,
 }
 
+var I2CMu sync.Mutex
+
 type SWITCHSTATE struct {
 	Status bool
 	ChStop chan struct{}
@@ -32,8 +35,12 @@ type SWITCHSTATE struct {
 }
 
 func GetSwitchStatus() (status bool) {
+	I2CMu.Lock()
+	defer I2CMu.Unlock()
+
 	smb, err := i2c.NewI2C(0x71, 0)
 	if err != nil {
+		log.Printf("STATUS NewI2C error: %s\n", err)
 		return
 	}
 	smb.Debug = false
@@ -41,27 +48,33 @@ func GetSwitchStatus() (status bool) {
 
 	state := make([]byte, 1)
 	_, err = smb.ReadBytes(state)
+	if err != nil {
+		log.Printf("STATUS ReadBytes error: %s\n", err)
+		return
+	}
 
 	return stateMap[state[0]]
 }
 
 func processStatus(ss *SWITCHSTATE, nc *http.Client, callback fn) {
 	state := GetSwitchStatus()
-	strTopic, strStatus := "", ""
-	hold := []string{}
+	log.Printf("Starting status: %v\n", state)
 
 	for {
 		select {
 		case <-ss.ChStop:
 			break
 		default:
-			state = GetSwitchStatus()
+			state := GetSwitchStatus()
 			if state != ss.Status {
+				log.Printf("New status: %v\n", state)
 				ss.Status = state
-				strTopic = ss.Topic
+				strTopic := ss.Topic
 				match, _ := regexp.MatchString("\\|\\| LAB (OPEN|CLOSED) \\|\\|", strTopic)
 				if match {
-					hold = strings.Split(strTopic, "||")
+					hold := strings.Split(strTopic, "||")
+
+					var strStatus string
 					if state {
 						strStatus = "OPEN"
 					} else {
@@ -70,9 +83,13 @@ func processStatus(ss *SWITCHSTATE, nc *http.Client, callback fn) {
 
 					strTopic = fmt.Sprintf("%s|| LAB %s ||%s", hold[0], strStatus, hold[2])
 
-					resp, _ := nc.Get(StatusEndPoint + strStatus)
-					io.Copy(ioutil.Discard, resp.Body)
-					resp.Body.Close()
+					resp, err := nc.Get(StatusEndPoint + strStatus)
+					if err != nil {
+						log.Printf("StatusEndPoint error: %s\n", err)
+					} else {
+						io.Copy(ioutil.Discard, resp.Body)
+						resp.Body.Close()
+					}
 
 					callback(BotChannel, strTopic)
 				}

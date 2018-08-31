@@ -2,6 +2,7 @@ package ledsign
 
 import (
 	"bytes"
+	"log"
 	"os"
 	"sync"
 	"time"
@@ -42,8 +43,12 @@ func recordMessage(sm SignMsg) {
 }
 
 func displayMessage(sm SignMsg) {
+	I2CMu.Lock()
+	defer I2CMu.Unlock()
+
 	smb, err := i2c.NewI2C(0x71, 0)
 	if err != nil {
+		log.Printf("LEDSIGN NewI2C error: %s\n", err)
 		return
 	}
 	smb.Debug = false
