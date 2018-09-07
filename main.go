@@ -18,7 +18,6 @@ const botPswd = configuration.BotPswd
 const servertls = configuration.ServerTLS
 
 func handleMessages(leds *ledsign.LEDSIGN, event *irc.Event, irc *irc.Connection) {
-
 	target := event.Nick
 	prefix := ""
 	if event.Arguments[0] == botChannel {
@@ -69,7 +68,7 @@ func handleMessages(leds *ledsign.LEDSIGN, event *irc.Event, irc *irc.Connection
 }
 
 func handleTopic(button *ledsign.SWITCHSTATE, event *irc.Event) {
-	button.Topic = event.Arguments[2]
+	button.SetTopic(event.Arguments[2])
 }
 
 func handleJoin(event *irc.Event, irc *irc.Connection) {
@@ -94,7 +93,6 @@ func handlePart(event *irc.Event, irc *irc.Connection) {
 }
 
 func main() {
-
 	irccon := irc.IRC(botNick, "foubot2")
 	irccon.VerboseCallbackHandler = false
 	irccon.Debug = false
