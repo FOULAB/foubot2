@@ -30,8 +30,22 @@ var I2CMu sync.Mutex
 type SWITCHSTATE struct {
 	Status bool
 	ChStop chan struct{}
-	Topic  string
 	once   sync.Once
+
+	mu     sync.Mutex
+	Topic  string
+}
+
+func (ss *SWITCHSTATE) GetTopic() string {
+	ss.mu.Lock()
+	defer ss.mu.Unlock()
+	return ss.Topic
+}
+
+func (ss *SWITCHSTATE) SetTopic(topic string) {
+	ss.mu.Lock()
+	defer ss.mu.Unlock()
+	ss.Topic = topic
 }
 
 func GetSwitchStatus() (status bool) {
@@ -57,8 +71,7 @@ func GetSwitchStatus() (status bool) {
 }
 
 func processStatus(ss *SWITCHSTATE, nc *http.Client, callback fn) {
-	state := GetSwitchStatus()
-	log.Printf("Starting status: %v\n", state)
+	var prevTopic string
 
 	for {
 		select {
@@ -66,10 +79,11 @@ func processStatus(ss *SWITCHSTATE, nc *http.Client, callback fn) {
 			break
 		default:
 			state := GetSwitchStatus()
-			if state != ss.Status {
+			strTopic := ss.GetTopic()
+			if state != ss.Status || strTopic != prevTopic {
 				log.Printf("New status: %v\n", state)
 				ss.Status = state
-				strTopic := ss.Topic
+				prevTopic = strTopic
 				match, _ := regexp.MatchString("\\|\\| LAB (OPEN|CLOSED) \\|\\|", strTopic)
 				if match {
 					hold := strings.Split(strTopic, "||")
@@ -123,6 +137,8 @@ func NewSwitchStatus(callback fn) (*SWITCHSTATE, error) {
 		Status: GetSwitchStatus(),
 		ChStop: chStop,
 	}
+
+	log.Printf("Starting status: %v\n", switchInstance.Status)
 
 	go processStatus(switchInstance, netClient, callback)
 
