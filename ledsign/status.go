@@ -130,7 +130,7 @@ func NewSwitchStatus(callback fn) (*SWITCHSTATE, error) {
 
 	netClient := &http.Client{
 		Transport: netTransport,
-		Timeout:   time.Second,
+		Timeout:   3 * time.Second,
 	}
 
 	switchInstance := &SWITCHSTATE{
