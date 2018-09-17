@@ -26,8 +26,15 @@ func handleMessages(leds *ledsign.LEDSIGN, event *irc.Event, irc *irc.Connection
 	}
 
 	command := strings.Split(event.Arguments[1], " ")[0]
+	
+	if command == "!vox" {
+		irc.Mode(botChannel, "+v", event.Nick)
 
-
+		irc.Privmsg(target, fmt.Sprintf("%sAlrity then!", prefix))
+		
+		return
+	}
+	
 	if command == "!sign" && len(strings.Split(event.Arguments[1], " ")) > 1 {
 		now := time.Now()
 		tid := now.Format("15:04 2-01-2006")
@@ -103,7 +110,7 @@ func handleJoin(event *irc.Event, irc *irc.Connection) {
 
 func handleNick(event *irc.Event, irc *irc.Connection) {
 	go func() {
-		time.Sleep(time.Second * 15)
+		time.Sleep(time.Minute * 5)
 		irc.Mode(botChannel, "+v", event.Nick)
 	}()
 }
