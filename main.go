@@ -39,10 +39,11 @@ func handleMessages(leds *ledsign.LEDSIGN, event *irc.Event, irc *irc.Connection
 		now := time.Now()
 		tid := now.Format("15:04 2-01-2006")
 
+		offset := len("!sign ")
 		message := ledsign.SignMsg{
 			UserName:  event.Nick,
 			Timestamp: tid,
-			UserMsg:   event.Arguments[1][6:],
+			UserMsg:   event.Arguments[1][offset:],
 		}
 
 		leds.ChMsgs <- message
@@ -60,11 +61,12 @@ func handleMessages(leds *ledsign.LEDSIGN, event *irc.Event, irc *irc.Connection
 	len(strings.Split(event.Arguments[1], " ")) > 2 {
 		now := time.Now()
 		tid := now.Format("15:04 2-01-2006")
-
+		
+		offset := len(command) + len(" !sign ")
 		message := ledsign.SignMsg{
 			UserName:  command[1:len(command) -1],
 			Timestamp: tid,
-			UserMsg:   event.Arguments[1][6:],
+			UserMsg:   event.Arguments[1][offset:],
 		}
 
 		leds.ChMsgs <- message
