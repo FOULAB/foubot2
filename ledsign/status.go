@@ -32,20 +32,7 @@ type SWITCHSTATE struct {
 	ChStop chan struct{}
 	once   sync.Once
 
-	mu     sync.Mutex
-	Topic  string
-}
-
-func (ss *SWITCHSTATE) GetTopic() string {
-	ss.mu.Lock()
-	defer ss.mu.Unlock()
-	return ss.Topic
-}
-
-func (ss *SWITCHSTATE) SetTopic(topic string) {
-	ss.mu.Lock()
-	defer ss.mu.Unlock()
-	ss.Topic = topic
+	Topic string
 }
 
 func GetSwitchStatus() (status bool) {
@@ -71,22 +58,18 @@ func GetSwitchStatus() (status bool) {
 }
 
 func processStatus(ss *SWITCHSTATE, nc *http.Client, callback fn) {
-	var prevTopic string
-
 	for {
 		select {
 		case <-ss.ChStop:
 			break
 		default:
 			state := GetSwitchStatus()
-			strTopic := ss.GetTopic()
-			if state != ss.Status || strTopic != prevTopic {
+			if state != ss.Status {
 				log.Printf("New status: %v\n", state)
 				ss.Status = state
-				prevTopic = strTopic
-				match, _ := regexp.MatchString("\\|\\| LAB (OPEN|CLOSED) \\|\\|", strTopic)
+				match := regexp.MustCompile("\\|\\| LAB (OPEN|CLOSED) \\|\\|").MatchString(ss.Topic)
 				if match {
-					hold := strings.Split(strTopic, "||")
+					hold := strings.Split(ss.Topic, "||")
 
 					var strStatus string
 					if state {
@@ -95,7 +78,7 @@ func processStatus(ss *SWITCHSTATE, nc *http.Client, callback fn) {
 						strStatus = "CLOSED"
 					}
 
-					strTopic = fmt.Sprintf("%s|| LAB %s ||%s", hold[0], strStatus, hold[2])
+					topic := fmt.Sprintf("%s|| LAB %s ||%s", hold[0], strStatus, hold[2])
 
 					resp, err := nc.Get(StatusEndPoint + strStatus)
 					if err != nil {
@@ -105,7 +88,7 @@ func processStatus(ss *SWITCHSTATE, nc *http.Client, callback fn) {
 						resp.Body.Close()
 					}
 
-					callback(BotChannel, strTopic)
+					callback(BotChannel, topic)
 				}
 			}
 			time.Sleep(time.Second)
@@ -119,7 +102,7 @@ func (ss SWITCHSTATE) CloseSwitchStatus() {
 	})
 }
 
-func NewSwitchStatus(callback fn) (*SWITCHSTATE, error) {
+func NewSwitchStatus(callback fn) *SWITCHSTATE {
 	chStop := make(chan struct{})
 
 	netTransport := &http.Transport{
@@ -142,5 +125,5 @@ func NewSwitchStatus(callback fn) (*SWITCHSTATE, error) {
 
 	go processStatus(switchInstance, netClient, callback)
 
-	return switchInstance, nil
+	return switchInstance
 }

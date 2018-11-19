@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/tls"
 	"fmt"
+	"log"
 	"regexp"
 	"strings"
 	"time"
@@ -99,10 +100,6 @@ func handleMessages(leds *ledsign.LEDSIGN, event *irc.Event, irc *irc.Connection
 	}
 }
 
-func handleTopic(button *ledsign.SWITCHSTATE, event *irc.Event) {
-	button.SetTopic(event.Arguments[2])
-}
-
 func handleJoin(event *irc.Event, irc *irc.Connection) {
 	go func() {
 		time.Sleep(time.Minute * 5)
@@ -139,12 +136,21 @@ func main() {
 	leds, err := ledsign.NewLEDSign()
 	defer leds.CloseLEDSign()
 
-	button, err := ledsign.NewSwitchStatus(irccon.Topic)
-	defer button.CloseSwitchStatus()
+	var button *ledsign.SWITCHSTATE
+	defer func() {
+		if button != nil {
+			button.CloseSwitchStatus()
+		}
+	}()
 
-	irccon.AddCallback("001", func(e *irc.Event) { irccon.Join(botChannel) })
-	irccon.AddCallback("366", func(e *irc.Event) {})
-	irccon.AddCallback("332", func(e *irc.Event) { handleTopic(button, e) })
+	irccon.AddCallback("001", func(e *irc.Event) {
+		log.Printf("Got welcome, joining %s", botChannel)
+		irccon.Join(botChannel)
+	})
+	irccon.AddCallback("332", func(e *irc.Event) {
+		log.Printf("Got topic, starting status goroutine")
+		button = ledsign.NewSwitchStatus(irccon.Topic)
+	})
 	irccon.AddCallback("PRIVMSG", func(e *irc.Event) { handleMessages(leds, e, irccon) })
 	irccon.AddCallback("JOIN", func(e *irc.Event) { handleJoin(e, irccon) })
 	irccon.AddCallback("NICK", func(e *irc.Event) { handleNick(e, irccon) })
