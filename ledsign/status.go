@@ -88,7 +88,9 @@ func processStatus(ss *SWITCHSTATE, nc *http.Client, callback fn) {
 						resp.Body.Close()
 					}
 
-					callback(BotChannel, topic)
+					if ss.Topic != topic {
+						callback(BotChannel, topic)
+					}
 				}
 			}
 			time.Sleep(time.Second)
