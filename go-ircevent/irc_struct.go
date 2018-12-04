@@ -31,6 +31,7 @@ type Connection struct {
 	Timeout          time.Duration
 	PingFreq         time.Duration
 	KeepAlive        time.Duration
+	AutoReconnect    bool
 	Server           string
 
 	RealName string // The real name we want to display.

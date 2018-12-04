@@ -235,6 +235,9 @@ func (irc *Connection) Loop() {
 		irc.Wait()
 		for !irc.isQuitting() {
 			irc.Log.Printf("Error, disconnected: %s\n", err)
+			if !irc.AutoReconnect {
+				return
+			}
 			if err = irc.Reconnect(); err != nil {
 				irc.Log.Printf("Error while reconnecting: %s\n", err)
 				time.Sleep(60 * time.Second)
@@ -596,17 +599,18 @@ func IRC(nick, user string) *Connection {
 	}
 
 	irc := &Connection{
-		nick:        nick,
-		nickcurrent: nick,
-		user:        user,
-		Log:         log.New(os.Stderr, "", log.LstdFlags),
-		end:         make(chan struct{}),
-		Version:     VERSION,
-		KeepAlive:   4 * time.Minute,
-		Timeout:     1 * time.Minute,
-		PingFreq:    15 * time.Minute,
-		SASLMech:    "PLAIN",
-		QuitMessage: "",
+		nick:          nick,
+		nickcurrent:   nick,
+		user:          user,
+		Log:           log.New(os.Stderr, "", log.LstdFlags),
+		end:           make(chan struct{}),
+		Version:       VERSION,
+		KeepAlive:     4 * time.Minute,
+		Timeout:       1 * time.Minute,
+		PingFreq:      15 * time.Minute,
+		AutoReconnect: true,
+		SASLMech:      "PLAIN",
+		QuitMessage:   "",
 	}
 	irc.setupCallbacks()
 	return irc
