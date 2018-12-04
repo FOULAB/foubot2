@@ -126,6 +126,7 @@ func main() {
 	irccon.VerboseCallbackHandler = false
 	irccon.Debug = false
 	irccon.UseTLS = true
+	irccon.AutoReconnect = false
 	if botPswd != "" {
 		irccon.UseSASL = true
 		irccon.SASLLogin = botNick
