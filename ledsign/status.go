@@ -104,7 +104,7 @@ func (ss SWITCHSTATE) CloseSwitchStatus() {
 	})
 }
 
-func NewSwitchStatus(callback fn) *SWITCHSTATE {
+func NewSwitchStatus(topic string, callback fn) *SWITCHSTATE {
 	chStop := make(chan struct{})
 
 	netTransport := &http.Transport{
@@ -119,6 +119,7 @@ func NewSwitchStatus(callback fn) *SWITCHSTATE {
 	}
 
 	switchInstance := &SWITCHSTATE{
+		Topic: topic,
 		Status: GetSwitchStatus(),
 		ChStop: chStop,
 	}

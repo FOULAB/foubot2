@@ -150,7 +150,7 @@ func main() {
 	})
 	irccon.AddCallback("332", func(e *irc.Event) {
 		log.Printf("Got topic, starting status goroutine")
-		button = ledsign.NewSwitchStatus(irccon.Topic)
+		button = ledsign.NewSwitchStatus(e.Arguments[2], irccon.Topic)
 	})
 	irccon.AddCallback("PRIVMSG", func(e *irc.Event) { handleMessages(leds, e, irccon) })
 	irccon.AddCallback("JOIN", func(e *irc.Event) { handleJoin(e, irccon) })
