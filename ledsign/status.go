@@ -28,7 +28,6 @@ var stateMap = map[byte]bool{
 var I2CMu sync.Mutex
 
 type SWITCHSTATE struct {
-	Status bool
 	ChStop chan struct{}
 	once   sync.Once
 
@@ -58,21 +57,25 @@ func GetSwitchStatus() (status bool) {
 }
 
 func processStatus(ss *SWITCHSTATE, nc *http.Client, callback fn) {
+	var status bool
+
+	first := true
+
 	for {
 		select {
 		case <-ss.ChStop:
 			break
 		default:
-			state := GetSwitchStatus()
-			if state != ss.Status {
-				log.Printf("New status: %v\n", state)
-				ss.Status = state
+			newStatus := GetSwitchStatus()
+			if first || status != newStatus {
+				log.Printf("New status: %v\n", newStatus)
+				status = newStatus
 				match := regexp.MustCompile("\\|\\| LAB (OPEN|CLOSED) \\|\\|").MatchString(ss.Topic)
 				if match {
 					hold := strings.Split(ss.Topic, "||")
 
 					var strStatus string
-					if state {
+					if status {
 						strStatus = "OPEN"
 					} else {
 						strStatus = "CLOSED"
@@ -90,9 +93,11 @@ func processStatus(ss *SWITCHSTATE, nc *http.Client, callback fn) {
 
 					if ss.Topic != topic {
 						callback(BotChannel, topic)
+						ss.Topic = topic
 					}
 				}
 			}
+			first = false
 			time.Sleep(time.Second)
 		}
 	}
@@ -120,11 +125,8 @@ func NewSwitchStatus(topic string, callback fn) *SWITCHSTATE {
 
 	switchInstance := &SWITCHSTATE{
 		Topic: topic,
-		Status: GetSwitchStatus(),
 		ChStop: chStop,
 	}
-
-	log.Printf("Starting status: %v\n", switchInstance.Status)
 
 	go processStatus(switchInstance, netClient, callback)
 
