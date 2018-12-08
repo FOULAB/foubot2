@@ -124,7 +124,7 @@ func NewSwitchStatus(topic string, callback fn) *SWITCHSTATE {
 	}
 
 	switchInstance := &SWITCHSTATE{
-		Topic: topic,
+		Topic:  topic,
 		ChStop: chStop,
 	}
 

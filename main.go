@@ -27,15 +27,15 @@ func handleMessages(leds *ledsign.LEDSIGN, event *irc.Event, irc *irc.Connection
 	}
 
 	command := strings.Split(event.Arguments[1], " ")[0]
-	
+
 	if command == "!vox" {
 		irc.Mode(botChannel, "+v", event.Nick)
 
 		irc.Privmsg(target, fmt.Sprintf("%sAlrity then!", prefix))
-		
+
 		return
 	}
-	
+
 	if command == "!sign" && len(strings.Split(event.Arguments[1], " ")) > 1 {
 		now := time.Now()
 		tid := now.Format("15:04 2-01-2006")
@@ -53,19 +53,19 @@ func handleMessages(leds *ledsign.LEDSIGN, event *irc.Event, irc *irc.Connection
 
 		return
 	}
-	
+
 	mmostUser := regexp.MustCompile(`^\[.*\]`)
-		
+
 	if mmostUser.MatchString(command) &&
-	event.Nick == "bilrost" &&
-	strings.Split(event.Arguments[1], " ")[1] == "!sign"&&
-	len(strings.Split(event.Arguments[1], " ")) > 2 {
+		event.Nick == "bilrost" &&
+		strings.Split(event.Arguments[1], " ")[1] == "!sign" &&
+		len(strings.Split(event.Arguments[1], " ")) > 2 {
 		now := time.Now()
 		tid := now.Format("15:04 2-01-2006")
-		
+
 		offset := len(command) + len(" !sign ")
 		message := ledsign.SignMsg{
-			UserName:  command[1:len(command) -1],
+			UserName:  command[1 : len(command)-1],
 			Timestamp: tid,
 			UserMsg:   event.Arguments[1][offset:],
 		}
