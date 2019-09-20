@@ -75,17 +75,30 @@ func processStatus(ss *SWITCHSTATE, nc *http.Client, callback fn) {
 					hold := strings.Split(ss.Topic, "||")
 
 					var strStatus string
+					var cmnd string
 					if status {
 						strStatus = "OPEN"
+						cmnd = "On"
 					} else {
 						strStatus = "CLOSED"
+						cmnd = "off"
 					}
 
 					topic := fmt.Sprintf("%s|| LAB %s ||%s", hold[0], strStatus, hold[2])
 
+					// Website
 					resp, err := nc.Get(StatusEndPoint + strStatus)
 					if err != nil {
 						log.Printf("StatusEndPoint error: %s\n", err)
+					} else {
+						io.Copy(ioutil.Discard, resp.Body)
+						resp.Body.Close()
+					}
+
+					// Blinker
+					resp, err = nc.Get(configuration.Blinker + "cm?cmnd=Power%20" + cmnd)
+					if err != nil {
+						log.Printf("Blinker error: %s\n", err)
 					} else {
 						io.Copy(ioutil.Discard, resp.Body)
 						resp.Body.Close()
