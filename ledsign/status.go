@@ -133,7 +133,7 @@ func NewSwitchStatus(topic string, callback fn) *SWITCHSTATE {
 
 	netClient := &http.Client{
 		Transport: netTransport,
-		Timeout:   3 * time.Second,
+		Timeout:   10 * time.Second,
 	}
 
 	switchInstance := &SWITCHSTATE{
