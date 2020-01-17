@@ -1,6 +1,7 @@
 package ledsign
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -102,6 +103,18 @@ func processStatus(ss *SWITCHSTATE, nc *http.Client, callback fn) {
 					} else {
 						io.Copy(ioutil.Discard, resp.Body)
 						resp.Body.Close()
+					}
+
+					// Melody
+					if strStatus == "CLOSED" {
+						data := bytes.NewBufferString(`{"jsonrpc": "2.0", "id": 1, "method": "core.playback.stop"}`)
+						resp, err = nc.Post("http://melody/mopidy/rpc", "application/json", data)
+						if err != nil {
+							log.Printf("Melody error: %s\n", err)
+						} else {
+							io.Copy(ioutil.Discard, resp.Body)
+							resp.Body.Close()
+						}
 					}
 
 					if ss.Topic != topic {
