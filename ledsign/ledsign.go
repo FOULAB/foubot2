@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"../go-i2c"
+	"foubot2/go-i2c"
 )
 
 type SignMsg struct {

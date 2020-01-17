@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"./configuration"
-	"./go-ircevent"
-	"./ledsign"
+	"foubot2/configuration"
+	"foubot2/go-ircevent"
+	"foubot2/ledsign"
 )
 
 const botChannel = configuration.BotChannel

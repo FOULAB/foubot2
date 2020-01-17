@@ -11,8 +11,8 @@ import (
 	"sync"
 	"time"
 
-	"../configuration"
-	"../go-i2c"
+	"foubot2/configuration"
+	"foubot2/go-i2c"
 )
 
 const StatusEndPoint = configuration.StatusEndPoint
