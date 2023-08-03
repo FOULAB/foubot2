@@ -14,6 +14,8 @@ import (
 
 	"foubot2/configuration"
 	"foubot2/go-i2c"
+
+	"github.com/mattermost/mattermost-server/v5/model"
 )
 
 const StatusEndPoint = configuration.StatusEndPoint
@@ -71,6 +73,8 @@ func processStatus(ss *SWITCHSTATE, nc *http.Client, callback fn) {
 			if first || status != newStatus {
 				log.Printf("New status: %v\n", newStatus)
 				status = newStatus
+
+				// IRC, Website, Blinker
 				match := regexp.MustCompile("\\|\\| LAB (OPEN|CLOSED) \\|\\|").MatchString(ss.Topic)
 				if match {
 					hold := strings.Split(ss.Topic, "||")
@@ -122,11 +126,50 @@ func processStatus(ss *SWITCHSTATE, nc *http.Client, callback fn) {
 						ss.Topic = topic
 					}
 				}
+
+				// Mattermost
+				if configuration.MattermostServer != "" {
+					if err := updateMattermost(nc); err != nil {
+						log.Printf("Mattermost error: %s\n", err)
+					}
+				}
 			}
 			first = false
 			time.Sleep(time.Second)
 		}
 	}
+}
+
+func updateMattermost(nc *http.Client) error {
+	mm := model.NewAPIv4Client(configuration.MattermostServer)
+	mm.HttpClient = nc
+	mm.SetToken(configuration.MattermostToken)
+
+	channel, resp := mm.GetChannel(configuration.MattermostChannelId, "")
+	if channel == nil {
+		return fmt.Errorf("Get channel: %+v", resp)
+	}
+
+	const labOpen = "|| LAB OPEN ||"
+	const labClosed = "|| LAB CLOSED ||"
+	var newHeader string
+	if strings.Contains(channel.Header, labOpen) {
+		newHeader = strings.ReplaceAll(channel.Header, labOpen, labClosed)
+	} else if strings.Contains(channel.Header, labClosed) {
+		newHeader = strings.ReplaceAll(channel.Header, labClosed, labOpen)
+	} else {
+		return fmt.Errorf("Channel header didn't have the key phrase: %q", channel.Header)
+	}
+
+	updated, resp := mm.UpdateChannel(&model.Channel{
+		Id:     channel.Id,
+		Header: newHeader,
+	})
+	if updated == nil {
+		return fmt.Errorf("Update channel: %+v", resp)
+	}
+
+	return nil
 }
 
 func (ss SWITCHSTATE) CloseSwitchStatus() {
