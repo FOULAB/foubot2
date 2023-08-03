@@ -129,7 +129,7 @@ func processStatus(ss *SWITCHSTATE, nc *http.Client, callback fn) {
 
 				// Mattermost
 				if configuration.MattermostServer != "" {
-					if err := updateMattermost(nc); err != nil {
+					if err := updateMattermost(nc, status); err != nil {
 						log.Printf("Mattermost error: %s\n", err)
 					}
 				}
@@ -140,7 +140,7 @@ func processStatus(ss *SWITCHSTATE, nc *http.Client, callback fn) {
 	}
 }
 
-func updateMattermost(nc *http.Client) error {
+func updateMattermost(nc *http.Client, status bool) error {
 	mm := model.NewAPIv4Client(configuration.MattermostServer)
 	mm.HttpClient = nc
 	mm.SetToken(configuration.MattermostToken)
@@ -152,11 +152,19 @@ func updateMattermost(nc *http.Client) error {
 
 	const labOpen = "|| LAB OPEN ||"
 	const labClosed = "|| LAB CLOSED ||"
+
+	var strStatus string
+	if status {
+		strStatus = labOpen
+	} else {
+		strStatus = labClosed
+	}
+
 	var newHeader string
 	if strings.Contains(channel.Header, labOpen) {
-		newHeader = strings.ReplaceAll(channel.Header, labOpen, labClosed)
+		newHeader = strings.ReplaceAll(channel.Header, labOpen, strStatus)
 	} else if strings.Contains(channel.Header, labClosed) {
-		newHeader = strings.ReplaceAll(channel.Header, labClosed, labOpen)
+		newHeader = strings.ReplaceAll(channel.Header, labClosed, strStatus)
 	} else {
 		return fmt.Errorf("Channel header didn't have the key phrase: %q", channel.Header)
 	}
