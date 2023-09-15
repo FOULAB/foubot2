@@ -169,9 +169,10 @@ func updateMattermost(nc *http.Client, status bool) error {
 		return fmt.Errorf("Channel header didn't have the key phrase: %q", channel.Header)
 	}
 
-	updated, resp := mm.UpdateChannel(&model.Channel{
-		Id:     channel.Id,
-		Header: newHeader,
+	log.Printf("New Mattermost header: %q", newHeader)
+
+	updated, resp := mm.PatchChannel(channel.Id, &model.ChannelPatch{
+		Header: &newHeader,
 	})
 	if updated == nil {
 		return fmt.Errorf("Update channel: %+v", resp)
