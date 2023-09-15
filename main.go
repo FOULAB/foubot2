@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"foubot2/configuration"
-	"foubot2/go-ircevent"
+	irc "foubot2/go-ircevent"
 	"foubot2/ledsign"
 )
 
@@ -137,20 +137,9 @@ func main() {
 	leds, err := ledsign.NewLEDSign()
 	defer leds.CloseLEDSign()
 
-	var button *ledsign.SWITCHSTATE
-	defer func() {
-		if button != nil {
-			button.CloseSwitchStatus()
-		}
-	}()
-
 	irccon.AddCallback("001", func(e *irc.Event) {
 		log.Printf("Got welcome, joining %s", botChannel)
 		irccon.Join(botChannel)
-	})
-	irccon.AddCallback("332", func(e *irc.Event) {
-		log.Printf("Got topic, starting status goroutine")
-		button = ledsign.NewSwitchStatus(e.Arguments[2], irccon.Topic)
 	})
 	irccon.AddCallback("PRIVMSG", func(e *irc.Event) { handleMessages(leds, e, irccon) })
 	irccon.AddCallback("JOIN", func(e *irc.Event) { handleJoin(e, irccon) })
@@ -162,6 +151,10 @@ func main() {
 		fmt.Printf("Connect error: %s\n", err)
 		return
 	}
+
+	// TODO: fix topic setting
+	button := ledsign.NewSwitchStatus("", irccon)
+	defer button.CloseSwitchStatus()
 
 	irccon.Loop()
 }
