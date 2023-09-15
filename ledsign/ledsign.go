@@ -21,6 +21,8 @@ type LEDSIGN struct {
 	once   sync.Once
 }
 
+var I2CMu sync.Mutex
+
 func recordMessage(sm SignMsg) {
 	f, err := os.OpenFile("trace.log", os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {

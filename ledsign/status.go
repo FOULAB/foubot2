@@ -16,19 +16,13 @@ import (
 	irc "foubot2/go-ircevent"
 
 	"github.com/mattermost/mattermost-server/v5/model"
+	rpio "github.com/stianeikeland/go-rpio/v4"
 )
 
 const StatusEndPoint = configuration.StatusEndPoint
 const BotChannel = configuration.BotChannel
 
-type fn func(string, string)
-
-var stateMap = map[byte]bool{
-	0x00: false,
-	0x01: true,
-}
-
-var I2CMu sync.Mutex
+var GPIOMu sync.Mutex
 
 type SWITCHSTATE struct {
 	ChStop chan struct{}
@@ -38,25 +32,11 @@ type SWITCHSTATE struct {
 }
 
 func GetSwitchStatus() (status bool) {
-	I2CMu.Lock()
-	defer I2CMu.Unlock()
+	pin := rpio.Pin(23)
+	pin.Input()
+	pin.PullUp()
 
-	smb, err := i2c.NewI2C(0x71, 0)
-	if err != nil {
-		log.Printf("STATUS NewI2C error: %s\n", err)
-		return
-	}
-	smb.Debug = false
-	defer smb.Close()
-
-	state := make([]byte, 1)
-	_, err = smb.ReadBytes(state)
-	if err != nil {
-		log.Printf("STATUS ReadBytes error: %s\n", err)
-		return
-	}
-
-	return stateMap[state[0]]
+	return pin.Read() == rpio.High
 }
 
 func processStatus(ss *SWITCHSTATE, nc *http.Client, irccon *irc.Connection) {
@@ -100,6 +80,14 @@ func processStatus(ss *SWITCHSTATE, nc *http.Client, irccon *irc.Connection) {
 					irccon.Privmsg(BotChannel, fmt.Sprintf("|| LAB %s ||", strStatus))
 				}
 
+				// GPIO
+				pin := rpio.Pin(24)
+				pin.Output()
+				if status {
+					pin.High()
+				} else {
+					pin.Low()
+				}
 
 				// Website
 				resp, err := nc.Get(StatusEndPoint + strStatus)
@@ -209,6 +197,10 @@ func NewSwitchStatus(topic string, irccon *irc.Connection) *SWITCHSTATE {
 	switchInstance := &SWITCHSTATE{
 		Topic:  topic,
 		ChStop: chStop,
+	}
+
+	if err := rpio.Open(); err != nil {
+		panic(err)
 	}
 
 	go processStatus(switchInstance, netClient, irccon)
