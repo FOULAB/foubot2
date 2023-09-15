@@ -94,6 +94,7 @@ func processStatus(ss *SWITCHSTATE, nc *http.Client, irccon *irc.Connection) {
 				if err != nil {
 					log.Printf("StatusEndPoint error: %s\n", err)
 				} else {
+					log.Printf("StatusEndPoint: %s", resp.Status)
 					io.Copy(ioutil.Discard, resp.Body)
 					resp.Body.Close()
 				}
@@ -103,6 +104,7 @@ func processStatus(ss *SWITCHSTATE, nc *http.Client, irccon *irc.Connection) {
 				if err != nil {
 					log.Printf("Blinker error: %s\n", err)
 				} else {
+					log.Printf("Blinker: %s", resp.Status)
 					io.Copy(ioutil.Discard, resp.Body)
 					resp.Body.Close()
 				}
@@ -122,8 +124,10 @@ func processStatus(ss *SWITCHSTATE, nc *http.Client, irccon *irc.Connection) {
 
 				// Mattermost
 				if configuration.MattermostServer != "" {
-					if err := updateMattermost(nc, status); err != nil {
+					if err := UpdateMattermost(nc, status); err != nil {
 						log.Printf("Mattermost error: %s\n", err)
+					} else {
+						log.Printf("Mattermost updated")
 					}
 				}
 			}
@@ -133,7 +137,7 @@ func processStatus(ss *SWITCHSTATE, nc *http.Client, irccon *irc.Connection) {
 	}
 }
 
-func updateMattermost(nc *http.Client, status bool) error {
+func UpdateMattermost(nc *http.Client, status bool) error {
 	mm := model.NewAPIv4Client(configuration.MattermostServer)
 	mm.HttpClient = nc
 	mm.SetToken(configuration.MattermostToken)
