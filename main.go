@@ -132,6 +132,7 @@ func main() {
 		irccon.SASLLogin = botNick
 		irccon.SASLPassword = botPswd
 	}
+	irccon.Server = servertls
 	irccon.TLSConfig = &tls.Config{InsecureSkipVerify: true}
 
 	leds, err := ledsign.NewLEDSign()
@@ -146,15 +147,18 @@ func main() {
 	irccon.AddCallback("NICK", func(e *irc.Event) { handleNick(e, irccon) })
 	irccon.AddCallback("PART", func(e *irc.Event) { handlePart(e, irccon) })
 
-	err = irccon.Connect(servertls)
-	if err != nil {
-		fmt.Printf("Connect error: %s\n", err)
-		return
-	}
-
 	// TODO: fix topic setting
 	button := ledsign.NewSwitchStatus("", irccon)
 	defer button.CloseSwitchStatus()
 
-	irccon.Loop()
+	for {
+		err = irccon.Reconnect()
+		if err != nil {
+			fmt.Printf("Connect error: %s\n", err)
+			time.Sleep(60 * time.Second)
+			continue
+		}
+
+		irccon.Loop()
+	}
 }
