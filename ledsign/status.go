@@ -89,24 +89,31 @@ func processStatus(ss *SWITCHSTATE, nc *http.Client, irccon *irc.Connection) {
 					pin.Low()
 				}
 
+				var resp *http.Response
+				var err error
+
 				// Website
-				resp, err := nc.Get(StatusEndPoint + strStatus)
-				if err != nil {
-					log.Printf("StatusEndPoint error: %s\n", err)
-				} else {
-					log.Printf("StatusEndPoint: %s", resp.Status)
-					io.Copy(ioutil.Discard, resp.Body)
-					resp.Body.Close()
+				if StatusEndPoint != "" {
+					resp, err = nc.Get(StatusEndPoint + strStatus)
+					if err != nil {
+						log.Printf("StatusEndPoint error: %s\n", err)
+					} else {
+						log.Printf("StatusEndPoint: %s", resp.Status)
+						io.Copy(ioutil.Discard, resp.Body)
+						resp.Body.Close()
+					}
 				}
 
 				// Blinker
-				resp, err = nc.Get(configuration.Blinker + "cm?cmnd=Power%20" + cmnd)
-				if err != nil {
-					log.Printf("Blinker error: %s\n", err)
-				} else {
-					log.Printf("Blinker: %s", resp.Status)
-					io.Copy(ioutil.Discard, resp.Body)
-					resp.Body.Close()
+				if configuration.Blinker != "" {
+					resp, err = nc.Get(configuration.Blinker + "cm?cmnd=Power%20" + cmnd)
+					if err != nil {
+						log.Printf("Blinker error: %s\n", err)
+					} else {
+						log.Printf("Blinker: %s", resp.Status)
+						io.Copy(ioutil.Discard, resp.Body)
+						resp.Body.Close()
+					}
 				}
 
 				// Melody
