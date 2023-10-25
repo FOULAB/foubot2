@@ -44,6 +44,12 @@ func processStatus(ss *SWITCHSTATE, nc *http.Client, irccon *irc.Connection) {
 
 	first := true
 
+	// If someone changes the topic manually, update our copy.
+	irccon.AddCallback("TOPIC", func (e *irc.Event) {
+		ss.Topic = e.Arguments[1]
+		log.Printf("Topic updated manually: %s", ss.Topic)
+	})
+
 	for {
 		select {
 		case <-ss.ChStop:
