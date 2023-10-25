@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/tls"
 	"fmt"
 	"log"
 	"regexp"
@@ -133,7 +132,6 @@ func main() {
 		irccon.SASLPassword = botPswd
 	}
 	irccon.Server = servertls
-	irccon.TLSConfig = &tls.Config{InsecureSkipVerify: true}
 
 	leds, err := ledsign.NewLEDSign()
 	defer leds.CloseLEDSign()
