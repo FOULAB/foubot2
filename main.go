@@ -27,7 +27,7 @@ func handleMessages(leds *ledsign.LEDSIGN, event *irc.Event, irc *irc.Connection
 
 	command := strings.Split(event.Arguments[1], " ")[0]
 
-	if command == "!vox" {
+	if command == "!vox" && configuration.BotAutoVoice {
 		irc.Mode(botChannel, "+v", event.Nick)
 
 		irc.Privmsg(target, fmt.Sprintf("%sAlrity then!", prefix))
