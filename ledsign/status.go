@@ -76,7 +76,11 @@ func processStatus(ss *SWITCHSTATE, nc *http.Client, irccon *irc.Connection) {
 					hold := strings.Split(ss.Topic, "||")
 					topic := fmt.Sprintf("%s|| LAB %s ||%s", hold[0], strStatus, hold[2])
 					if ss.Topic != topic {
-						irccon.Topic(BotChannel, topic)
+						if configuration.TopicUseChanserv {
+							irccon.Privmsg("ChanServ", fmt.Sprintf("TOPIC %s %s", configuration.BotChannel, topic))
+						} else {
+							irccon.Topic(BotChannel, topic)
+						}
 						ss.Topic = topic
 					}
 				}
