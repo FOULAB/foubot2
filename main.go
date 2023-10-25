@@ -138,18 +138,25 @@ func main() {
 	leds, err := ledsign.NewLEDSign()
 	defer leds.CloseLEDSign()
 
+	var button *ledsign.SWITCHSTATE
+	defer func() {
+		if button != nil {
+			button.CloseSwitchStatus()
+		}
+	}()
+
 	irccon.AddCallback("001", func(e *irc.Event) {
 		log.Printf("Got welcome, joining %s", botChannel)
 		irccon.Join(botChannel)
+	})
+	irccon.AddCallback("332", func(e *irc.Event) {
+		log.Printf("Got topic, starting status goroutine")
+		button = ledsign.NewSwitchStatus(e.Arguments[2], irccon)
 	})
 	irccon.AddCallback("PRIVMSG", func(e *irc.Event) { handleMessages(leds, e, irccon) })
 	irccon.AddCallback("JOIN", func(e *irc.Event) { handleJoin(e, irccon) })
 	irccon.AddCallback("NICK", func(e *irc.Event) { handleNick(e, irccon) })
 	irccon.AddCallback("PART", func(e *irc.Event) { handlePart(e, irccon) })
-
-	// TODO: fix topic setting
-	button := ledsign.NewSwitchStatus("", irccon)
-	defer button.CloseSwitchStatus()
 
 	for {
 		err = irccon.Reconnect()
