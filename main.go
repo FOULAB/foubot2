@@ -120,7 +120,7 @@ func handlePart(event *irc.Event, irc *irc.Connection) {
 	}()
 }
 
-func main() {
+func connectOnce() {
 	irccon := irc.IRC(botNick, "foubot2")
 	irccon.VerboseCallbackHandler = false
 	irccon.Debug = false
@@ -158,14 +158,18 @@ func main() {
 		irccon.AddCallback("PART", func(e *irc.Event) { handlePart(e, irccon) })
 	}
 
-	for {
-		err = irccon.Reconnect()
-		if err != nil {
-			fmt.Printf("Connect error: %s\n", err)
-			time.Sleep(60 * time.Second)
-			continue
-		}
+	err = irccon.Reconnect()
+	if err != nil {
+		fmt.Printf("Connect error: %s\n", err)
+		return
+	}
 
-		irccon.Loop()
+	irccon.Loop()
+}
+
+func main() {
+	for {
+		connectOnce()
+		time.Sleep(60 * time.Second)
 	}
 }
