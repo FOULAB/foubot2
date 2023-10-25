@@ -154,9 +154,11 @@ func main() {
 		button = ledsign.NewSwitchStatus(e.Arguments[2], irccon)
 	})
 	irccon.AddCallback("PRIVMSG", func(e *irc.Event) { handleMessages(leds, e, irccon) })
-	irccon.AddCallback("JOIN", func(e *irc.Event) { handleJoin(e, irccon) })
-	irccon.AddCallback("NICK", func(e *irc.Event) { handleNick(e, irccon) })
-	irccon.AddCallback("PART", func(e *irc.Event) { handlePart(e, irccon) })
+	if configuration.BotAutoVoice {
+		irccon.AddCallback("JOIN", func(e *irc.Event) { handleJoin(e, irccon) })
+		irccon.AddCallback("NICK", func(e *irc.Event) { handleNick(e, irccon) })
+		irccon.AddCallback("PART", func(e *irc.Event) { handlePart(e, irccon) })
+	}
 
 	for {
 		err = irccon.Reconnect()
