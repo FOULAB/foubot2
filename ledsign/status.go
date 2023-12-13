@@ -86,7 +86,7 @@ func processStatus(ss *SWITCHSTATE, nc *http.Client, irccon *irc.Connection) {
 				}
 
 				// IRC announcement (but not at startup, to avoid spam)
-				if !first {
+				if !first && configuration.TopicSendToChannel {
 					irccon.Privmsg(BotChannel, fmt.Sprintf("|| LAB %s ||", strStatus))
 				}
 
