@@ -50,10 +50,11 @@ func processStatus(ss *SWITCHSTATE, nc *http.Client, irccon *irc.Connection) {
 		log.Printf("Topic updated manually: %s", ss.Topic)
 	})
 
+OuterLoop:
 	for {
 		select {
 		case <-ss.ChStop:
-			break
+			break OuterLoop
 		default:
 			newStatus := GetSwitchStatus()
 			if first || status != newStatus {
