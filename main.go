@@ -9,7 +9,7 @@ import (
 
 	"foubot2/configuration"
 	irc "foubot2/go-ircevent"
-	"foubot2/ledsign"
+	"foubot2/status"
 )
 
 const botChannel = configuration.BotChannel
@@ -17,7 +17,7 @@ const botNick = configuration.BotNick
 const botPswd = configuration.BotPswd
 const servertls = configuration.ServerTLS
 
-func handleMessages(leds *ledsign.LEDSIGN, event *irc.Event, irc *irc.Connection) {
+func handleMessages(event *irc.Event, irc *irc.Connection) {
 	target := event.Nick
 	prefix := ""
 	if event.Arguments[0] == botChannel {
@@ -29,47 +29,6 @@ func handleMessages(leds *ledsign.LEDSIGN, event *irc.Event, irc *irc.Connection
 
 	if command == "!vox" && configuration.BotAutoVoice {
 		irc.Mode(botChannel, "+v", event.Nick)
-
-		irc.Privmsg(target, fmt.Sprintf("%sAlrity then!", prefix))
-
-		return
-	}
-
-	if command == "!sign" && len(strings.Split(event.Arguments[1], " ")) > 1 {
-		now := time.Now()
-		tid := now.Format("15:04 2-01-2006")
-
-		offset := len("!sign ")
-		message := ledsign.SignMsg{
-			UserName:  event.Nick,
-			Timestamp: tid,
-			UserMsg:   event.Arguments[1][offset:],
-		}
-
-		leds.ChMsgs <- message
-
-		irc.Privmsg(target, fmt.Sprintf("%sAlrity then!", prefix))
-
-		return
-	}
-
-	mmostUser := regexp.MustCompile(`^\[.*\]`)
-
-	if mmostUser.MatchString(command) &&
-		event.Nick == "bilrost" &&
-		strings.Split(event.Arguments[1], " ")[1] == "!sign" &&
-		len(strings.Split(event.Arguments[1], " ")) > 2 {
-		now := time.Now()
-		tid := now.Format("15:04 2-01-2006")
-
-		offset := len(command) + len(" !sign ")
-		message := ledsign.SignMsg{
-			UserName:  command[1 : len(command)-1],
-			Timestamp: tid,
-			UserMsg:   event.Arguments[1][offset:],
-		}
-
-		leds.ChMsgs <- message
 
 		irc.Privmsg(target, fmt.Sprintf("%sAlrity then!", prefix))
 
@@ -133,9 +92,6 @@ func connectOnce() {
 	}
 	irccon.Server = servertls
 
-	leds, err := ledsign.NewLEDSign()
-	defer leds.CloseLEDSign()
-
 	var button *ledsign.SWITCHSTATE
 	defer func() {
 		if button != nil {
@@ -151,14 +107,14 @@ func connectOnce() {
 		log.Printf("Got topic, starting status goroutine")
 		button = ledsign.NewSwitchStatus(e.Arguments[2], irccon)
 	})
-	irccon.AddCallback("PRIVMSG", func(e *irc.Event) { handleMessages(leds, e, irccon) })
+	irccon.AddCallback("PRIVMSG", func(e *irc.Event) { handleMessages(e, irccon) })
 	if configuration.BotAutoVoice {
 		irccon.AddCallback("JOIN", func(e *irc.Event) { handleJoin(e, irccon) })
 		irccon.AddCallback("NICK", func(e *irc.Event) { handleNick(e, irccon) })
 		irccon.AddCallback("PART", func(e *irc.Event) { handlePart(e, irccon) })
 	}
 
-	err = irccon.Reconnect()
+	err := irccon.Reconnect()
 	if err != nil {
 		fmt.Printf("Connect error: %s\n", err)
 		return
