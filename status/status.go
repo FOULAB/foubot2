@@ -39,6 +39,22 @@ func GetSwitchStatus() (status bool) {
 	return pin.Read() == rpio.High
 }
 
+func UpdateOutputGpio(status bool) {
+	highPin:= rpio.Pin(17);
+	gndPin := rpio.Pin(21);
+
+	gndPin.Output()
+	gndPin.Low()
+
+	highPin.Output()
+	if status {
+		highPin.High()
+	} else {
+		highPin.Low()
+	}
+}
+
+
 func processStatus(ss *SWITCHSTATE, nc *http.Client, irccon *irc.Connection) {
 	var status bool
 
@@ -58,6 +74,7 @@ OuterLoop:
 		default:
 			newStatus := GetSwitchStatus()
 			if first || status != newStatus {
+				UpdateOutputGpio(newStatus)
 				log.Printf("New status: %v\n", newStatus)
 				status = newStatus
 
