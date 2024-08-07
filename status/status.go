@@ -39,29 +39,13 @@ func GetSwitchStatus() (status bool) {
 	return pin.Read() == rpio.High
 }
 
-func UpdateOutputGpio(status bool) {
-	highPin:= rpio.Pin(17);
-	gndPin := rpio.Pin(21);
-
-	gndPin.Output()
-	gndPin.Low()
-
-	highPin.Output()
-	if status {
-		highPin.High()
-	} else {
-		highPin.Low()
-	}
-}
-
-
 func processStatus(ss *SWITCHSTATE, nc *http.Client, irccon *irc.Connection) {
 	var status bool
 
 	first := true
 
 	// If someone changes the topic manually, update our copy.
-	irccon.AddCallback("TOPIC", func (e *irc.Event) {
+	irccon.AddCallback("TOPIC", func(e *irc.Event) {
 		ss.Topic = e.Arguments[1]
 		log.Printf("Topic updated manually: %s", ss.Topic)
 	})
@@ -74,7 +58,6 @@ OuterLoop:
 		default:
 			newStatus := GetSwitchStatus()
 			if first || status != newStatus {
-				UpdateOutputGpio(newStatus)
 				log.Printf("New status: %v\n", newStatus)
 				status = newStatus
 
@@ -115,6 +98,15 @@ OuterLoop:
 					pin.High()
 				} else {
 					pin.Low()
+				}
+
+				// For downstairs "Open" LED
+				highPin := rpio.Pin(17)
+				highPin.Output()
+				if status {
+					highPin.High()
+				} else {
+					highPin.Low()
 				}
 
 				var resp *http.Response
@@ -241,6 +233,11 @@ func NewSwitchStatus(topic string, irccon *irc.Connection) *SWITCHSTATE {
 	if err := rpio.Open(); err != nil {
 		panic(err)
 	}
+
+	// For downstairs "Open" LED
+	gndPin := rpio.Pin(21)
+	gndPin.Output()
+	gndPin.Low()
 
 	go processStatus(switchInstance, netClient, irccon)
 
