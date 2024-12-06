@@ -7,7 +7,7 @@ Running on a Raspberry Pi Model 1 B Rev 2 with a GPIO wired to the Big Red Butto
 I am a horrible person, and do not care for vendoring in this instance!
 
 - Clone repository.
-- Within, run ``` $ go build -o foubot main.go```
+- Within, run ``` $ go build -o foubot2 main.go```
 
 **Click.**
 
