@@ -7,9 +7,11 @@ import (
 	"strings"
 	"time"
 
+	"crypto/tls"
 	"foubot2/configuration"
-	irc "foubot2/go-ircevent"
 	"foubot2/status"
+	irc "github.com/thoj/go-ircevent"
+	"net"
 )
 
 const botChannel = configuration.BotChannel
@@ -84,13 +86,16 @@ func connectOnce() {
 	irccon.VerboseCallbackHandler = false
 	irccon.Debug = false
 	irccon.UseTLS = true
-	irccon.AutoReconnect = false
+	host, _, err := net.SplitHostPort(servertls)
+	if err != nil {
+		log.Panicf("parse IRC server: %s\n", err)
+	}
+	irccon.TLSConfig = &tls.Config{ServerName: host}
 	if botPswd != "" {
 		irccon.UseSASL = true
 		irccon.SASLLogin = botNick
 		irccon.SASLPassword = botPswd
 	}
-	irccon.Server = servertls
 
 	var button *ledsign.SWITCHSTATE
 	defer func() {
@@ -114,13 +119,24 @@ func connectOnce() {
 		irccon.AddCallback("PART", func(e *irc.Event) { handlePart(e, irccon) })
 	}
 
-	err := irccon.Reconnect()
+	// Do not use irccon.Loop() - it doesn't reconnect reliably when using SASL:
+	// https://github.com/thoj/go-ircevent/issues/112#issuecomment-2562001261
+
+	// This specific code pattern observed to:
+	// 1) reconnect reliably
+	// 2) not leak goroutines
+	err = irccon.Connect(servertls)
+	defer func() {
+		irccon.Disconnect()
+		fmt.Printf("IRC disconnected\n")
+	}()
 	if err != nil {
 		fmt.Printf("Connect error: %s\n", err)
 		return
 	}
 
-	irccon.Loop()
+	err = <-irccon.ErrorChan()
+	fmt.Printf("Error, disconnected: %s\n", err)
 }
 
 func main() {
