@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"foubot2/configuration"
-	irc "foubot2/go-ircevent"
+	irc "github.com/thoj/go-ircevent"
 
 	"github.com/mattermost/mattermost-server/v5/model"
 	rpio "github.com/stianeikeland/go-rpio/v4"
