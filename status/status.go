@@ -80,7 +80,7 @@ OuterLoop:
 						if configuration.TopicUseChanserv {
 							irccon.Privmsg("ChanServ", fmt.Sprintf("TOPIC %s %s", configuration.BotChannel, topic))
 						} else {
-							irccon.Topic(BotChannel, topic)
+							irccon.SendRawf("TOPIC %s :%s", BotChannel, topic)
 						}
 						ss.Topic = topic
 					}
