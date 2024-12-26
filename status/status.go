@@ -55,6 +55,8 @@ OuterLoop:
 		select {
 		case <-ss.ChStop:
 			break OuterLoop
+		
+			// TODO: add cases for NextEvent, StartingEvent
 		default:
 			newStatus := GetSwitchStatus()
 			if first || status != newStatus {

@@ -15,6 +15,8 @@ const TopicSendToChannel = false
 const StatusEndPoint = "https://foulab.org/YTDMOWI3N2MXNMEZYWE4MGRHYTRLMZC4NJU5MJI2ZJYYODMYNME5NSAGLQO/"
 const Blinker = "http://blinker.lab/"
 
+const CalendarURL = "https://foulab.org/ical/foulab.ics"
+
 // If set, update Mattermost channel header with the status of the lab
 // (open or closed).
 const MattermostServer = ""
