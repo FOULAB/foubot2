@@ -21,8 +21,6 @@ import (
 const StatusEndPoint = configuration.StatusEndPoint
 const BotChannel = configuration.BotChannel
 
-var GPIOMu sync.Mutex
-
 type SWITCHSTATE struct {
 	ChStop chan struct{}
 	once   sync.Once
