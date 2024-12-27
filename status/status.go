@@ -8,12 +8,14 @@ import (
 	"log"
 	"net/http"
 	"regexp"
+	"strings"
 	"sync"
 	"time"
 
 	"foubot2/configuration"
 	irc "github.com/thoj/go-ircevent"
 
+	"github.com/jonboulle/clockwork"
 	"github.com/mattermost/mattermost-server/v5/model"
 	rpio "github.com/stianeikeland/go-rpio/v4"
 )
@@ -25,7 +27,8 @@ type SWITCHSTATE struct {
 	ChStop chan struct{}
 	once   sync.Once
 
-	Topic string
+	Topic    string
+	calendar Calendar
 }
 
 func GetSwitchStatus() (status bool) {
@@ -52,6 +55,19 @@ OuterLoop:
 		select {
 		case <-ss.ChStop:
 			break OuterLoop
+
+		case nextEvent := <-ss.calendar.NextEvent:
+			// Escape || to prevent interfering with topic structure.
+			nextEvent = strings.ReplaceAll(nextEvent, "|", ".")
+			if nextEvent == "" {
+				nextEvent = "(none)"
+			}
+
+			ss.UpdateTopic(irccon, nc, regexp.MustCompile(`\|\| Next event: (.*?) \|\|`), nextEvent)
+
+		case startingEvent := <-ss.calendar.StartingEvent:
+			ss.SendMessage(irccon, nc, fmt.Sprintf("Starting event: %s", startingEvent))
+
 		default:
 			newStatus := GetSwitchStatus()
 			if first || status != newStatus {
@@ -211,8 +227,30 @@ func (ss *SWITCHSTATE) updateTopicMattermost(nc *http.Client, re *regexp.Regexp,
 	return nil
 }
 
+func (ss *SWITCHSTATE) SendMessage(irccon *irc.Connection, nc *http.Client, text string) {
+	// IRC
+	irccon.Privmsg(BotChannel, text)
+
+	// Mattermost
+	if configuration.MattermostServer != "" {
+		mm := model.NewAPIv4Client(configuration.MattermostServer)
+		mm.HttpClient = nc
+		mm.SetToken(configuration.MattermostToken)
+
+		post := &model.Post{
+			ChannelId: configuration.MattermostChannelId,
+			Message:   text,
+		}
+		post, resp := mm.CreatePost(post)
+		if post == nil {
+			log.Printf("Create post error: %+v", resp)
+		}
+	}
+}
+
 func (ss SWITCHSTATE) CloseSwitchStatus() {
 	ss.once.Do(func() {
+		ss.calendar.Close()
 		close(ss.ChStop)
 	})
 }
@@ -234,6 +272,12 @@ func NewSwitchStatus(topic string, irccon *irc.Connection) *SWITCHSTATE {
 	switchInstance := &SWITCHSTATE{
 		Topic:  topic,
 		ChStop: chStop,
+		calendar: Calendar{
+			Clock:       clockwork.NewRealClock(),
+			HTTPClient:  netClient,
+			URL:         configuration.CalendarURL,
+			GetInterval: 60 * time.Minute,
+		},
 	}
 
 	if err := rpio.Open(); err != nil {
@@ -246,6 +290,8 @@ func NewSwitchStatus(topic string, irccon *irc.Connection) *SWITCHSTATE {
 	gndPin.Low()
 
 	go processStatus(switchInstance, netClient, irccon)
+
+	switchInstance.calendar.Start()
 
 	return switchInstance
 }
