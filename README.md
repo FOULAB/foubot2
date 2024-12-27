@@ -1,6 +1,6 @@
-To compile for foubot's hardware, set the following:
+To compile for foubot's hardware, run the following:
 
-	export GOARCH=arm64 GOARM=5 GOOS=linux
+	GOARCH=arm64 GOOS=linux go build
 
 Running on a Raspberry Pi Model 4 B with a GPIO wired to the Big Red Button.
 
@@ -11,7 +11,7 @@ https://laboratoires.foulab.org/w/tiki-index.php?page=Foubot
 I am a horrible person, and do not care for vendoring in this instance!
 
 - Clone repository.
-- Within, run ``` $ go build -o foubot2 main.go```
+- Within, run `$ go build`
 
 **Click.**
 
