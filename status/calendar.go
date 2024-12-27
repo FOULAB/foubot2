@@ -150,15 +150,22 @@ func (c *Calendar) timerLoop(events []*ical.VEvent) {
 		} else {
 			log.Printf("Next event: (none)\n")
 			c.NextEvent <- ""
-			break
+			log.Printf("Out of events, timer loop exiting")
+			return
 		}
 
-		sleepUntil(getStartAtOrPanic(events[i]))
+		select {
+		case <-c.stopTimer:
+			log.Printf("Timer loop stopping")
+			return
+		case <-c.Clock.After(getStartAtOrPanic(events[i]).Sub(now)):
+		}
 
 		log.Printf("Starting event: %s\n", events[i])
 		c.StartingEvent <- events[i].GetProperty(ical.ComponentPropertySummary).Value
+
+		i++
 	}
-	log.Printf("Out of events, timer loop exiting")
 }
 
 func (c *Calendar) Close() {
