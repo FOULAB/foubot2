@@ -8,7 +8,6 @@ import (
 	"log"
 	"net/http"
 	"regexp"
-	"strings"
 	"sync"
 	"time"
 
@@ -71,20 +70,8 @@ OuterLoop:
 					cmnd = "off"
 				}
 
-				// IRC topic
-				match := regexp.MustCompile("\\|\\| LAB (OPEN|CLOSED) \\|\\|").MatchString(ss.Topic)
-				if match {
-					hold := strings.Split(ss.Topic, "||")
-					topic := fmt.Sprintf("%s|| LAB %s ||%s", hold[0], strStatus, hold[2])
-					if ss.Topic != topic {
-						if configuration.TopicUseChanserv {
-							irccon.Privmsg("ChanServ", fmt.Sprintf("TOPIC %s %s", configuration.BotChannel, topic))
-						} else {
-							irccon.SendRawf("TOPIC %s :%s", BotChannel, topic)
-						}
-						ss.Topic = topic
-					}
-				}
+				// IRC, Mattermost
+				ss.UpdateTopic(irccon, nc, regexp.MustCompile(`\|\| LAB (OPEN|CLOSED) \|\|`), strStatus)
 
 				// IRC announcement (but not at startup, to avoid spam)
 				if !first && configuration.TopicSendToChannel {
@@ -148,15 +135,6 @@ OuterLoop:
 						resp.Body.Close()
 					}
 				}
-
-				// Mattermost
-				if configuration.MattermostServer != "" {
-					if err := UpdateMattermost(nc, status); err != nil {
-						log.Printf("Mattermost error: %s\n", err)
-					} else {
-						log.Printf("Mattermost updated")
-					}
-				}
 			}
 			first = false
 			time.Sleep(time.Second)
@@ -164,45 +142,61 @@ OuterLoop:
 	}
 }
 
-func UpdateMattermost(nc *http.Client, status bool) error {
-	mm := model.NewAPIv4Client(configuration.MattermostServer)
-	mm.HttpClient = nc
-	mm.SetToken(configuration.MattermostToken)
-
-	channel, resp := mm.GetChannel(configuration.MattermostChannelId, "")
-	if channel == nil {
-		return fmt.Errorf("Get channel: %+v", resp)
-	}
-
-	const labOpen = "|| LAB OPEN ||"
-	const labClosed = "|| LAB CLOSED ||"
-
-	var strStatus string
-	if status {
-		strStatus = labOpen
+// UpdateTopic modifies the topic (IRC, Mattermost) by matching `re` and replacing
+// the subexpression by `new`. The regexp must have exactly one subexpression.
+func (ss *SWITCHSTATE) UpdateTopic(irccon *irc.Connection, nc *http.Client, re *regexp.Regexp, new string) {
+	// IRC
+	match := re.FindStringSubmatchIndex(ss.Topic)
+	if len(match) == 4 {
+		start, end := match[2], match[3]
+		topic := ss.Topic[:start] + new + ss.Topic[end:]
+		if ss.Topic != topic {
+			log.Printf("New IRC topic: %q\n", topic)
+			if configuration.TopicUseChanserv {
+				irccon.Privmsg("ChanServ", fmt.Sprintf("TOPIC %s %s", configuration.BotChannel, topic))
+			} else {
+				irccon.SendRawf("TOPIC %s :%s", BotChannel, topic)
+			}
+			ss.Topic = topic
+		} else {
+			log.Printf("IRC topic unchanged")
+		}
 	} else {
-		strStatus = labClosed
+		log.Printf("IRC topic %q did not match regexp %q\n", ss.Topic, re)
 	}
 
-	var newHeader string
-	if strings.Contains(channel.Header, labOpen) {
-		newHeader = strings.ReplaceAll(channel.Header, labOpen, strStatus)
-	} else if strings.Contains(channel.Header, labClosed) {
-		newHeader = strings.ReplaceAll(channel.Header, labClosed, strStatus)
-	} else {
-		return fmt.Errorf("Channel header didn't have the key phrase: %q", channel.Header)
+	// Mattermost
+	if configuration.MattermostServer != "" {
+		mm := model.NewAPIv4Client(configuration.MattermostServer)
+		mm.HttpClient = nc
+		mm.SetToken(configuration.MattermostToken)
+
+		channel, resp := mm.GetChannel(configuration.MattermostChannelId, "")
+		if channel == nil {
+			log.Printf("Mattermost error: Get channel: %+v\n", resp)
+		} else {
+			match = re.FindStringSubmatchIndex(channel.Header)
+			if len(match) == 4 {
+				start, end := match[2], match[3]
+				header := channel.Header[:start] + new + channel.Header[end:]
+
+				if header != channel.Header {
+					log.Printf("New Mattermost header: %q\n", header)
+
+					updated, resp := mm.PatchChannel(channel.Id, &model.ChannelPatch{
+						Header: &header,
+					})
+					if updated == nil {
+						log.Printf("Patch channel error: %+v", resp)
+					}
+				} else {
+					log.Printf("Mattermost header unchanged\n")
+				}
+			} else {
+				log.Printf("Mattermost header %q did not match regexp: %q\n", channel.Header, re)
+			}
+		}
 	}
-
-	log.Printf("New Mattermost header: %q", newHeader)
-
-	updated, resp := mm.PatchChannel(channel.Id, &model.ChannelPatch{
-		Header: &newHeader,
-	})
-	if updated == nil {
-		return fmt.Errorf("Update channel: %+v", resp)
-	}
-
-	return nil
 }
 
 func (ss SWITCHSTATE) CloseSwitchStatus() {
