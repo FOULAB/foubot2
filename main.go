@@ -127,6 +127,16 @@ func connectOnce() {
 	// 2) not leak goroutines
 	err = irccon.Connect(servertls)
 	defer func() {
+		// Workaround for https://github.com/thoj/go-ircevent/issues/112#issuecomment-2569796268:
+		// If Connect() fails early (eg. from Dial), irccon.Error is not yet
+		// created and Disconnect can deadlock. Make sure Error exists in all
+		// cases.
+		irccon.Lock()
+		if irccon.Error == nil {
+			irccon.Error = make(chan error, 10)
+		}
+		irccon.Unlock()
+
 		irccon.Disconnect()
 		fmt.Printf("IRC disconnected\n")
 	}()
