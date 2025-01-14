@@ -289,9 +289,9 @@ func NewSwitchStatus(topic string, irccon *irc.Connection) *SWITCHSTATE {
 	gndPin.Output()
 	gndPin.Low()
 
-	go processStatus(switchInstance, netClient, irccon)
-
 	switchInstance.calendar.Start()
+
+	go processStatus(switchInstance, netClient, irccon)
 
 	return switchInstance
 }
