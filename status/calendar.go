@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 )
@@ -31,6 +32,15 @@ type eventsByStart []gocal.Event
 func (v eventsByStart) Len() int           { return len(v) }
 func (v eventsByStart) Swap(i, j int)      { v[i], v[j] = v[j], v[i] }
 func (v eventsByStart) Less(i, j int) bool { return v[i].Start.Before(*v[j].Start) }
+
+func init() {
+	// Our calendar TZID contains quoted strings, which is valid by RFC
+	// https://icalendar.org/iCalendar-RFC-5545/3-1-content-lines.html
+	// but not supported in gocal.
+	gocal.SetTZMapper(func(tzid string) (*time.Location, error) {
+		return time.LoadLocation(strings.Trim(tzid, "\""))
+	})
+}
 
 func (c *Calendar) Start() {
 	c.NextEvent = make(chan string)
