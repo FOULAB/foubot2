@@ -7,16 +7,13 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 )
 
-func TestFake(t *testing.T) {
-	start := time.Now()
-	time1 := start.Add(3 * time.Second)
-	time2 := time1.Add(3 * time.Second)
-
-	hs := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func newServerWithCalendar(time1, time2 time.Time) *httptest.Server {
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `
 BEGIN:VCALENDAR
 
@@ -40,6 +37,14 @@ END:VCALENDAR
 `, time1.Format("20060102T150405"), time1.Format("20060102T150405"),
 			time2.Format("20060102T150405"), time2.Format("20060102T150405"))
 	}))
+}
+
+func TestFake(t *testing.T) {
+	start := time.Now()
+	time1 := start.Add(3 * time.Second)
+	time2 := time1.Add(3 * time.Second)
+
+	hs := newServerWithCalendar(time1, time2)
 
 	clock := clockwork.NewRealClock()
 	cal := &Calendar{
@@ -77,11 +82,46 @@ END:VCALENDAR
 	cal.Close()
 }
 
+func TestFakeEarlyClose(t *testing.T) {
+	start := time.Now()
+	time1 := start.Add(3 * time.Second)
+	time2 := time1.Add(3 * time.Second)
+
+	hs := newServerWithCalendar(time1, time2)
+
+	clock := clockwork.NewRealClock()
+	cal := &Calendar{
+		Clock:       clock,
+		HTTPClient:  hs.Client(),
+		URL:         hs.URL,
+		GetInterval: 60 * time.Minute,
+	}
+	cal.Start()
+
+	done := make(chan struct{})
+	go func() {
+		time.Sleep(2 * time.Second)
+		// Still events upcoming, but close now.
+		cal.Close()
+		close(done)
+	}()
+
+	nextEvent := <-cal.NextEvent
+	log.Printf("Next event: %s", nextEvent)
+	if nextEvent != "Event 1" {
+		t.Errorf("Next event: got %q, want %q", nextEvent, "Event 1")
+	}
+
+	<-done
+}
+
 func TestCalendarChange(t *testing.T) {
 	start := time.Now()
 	time1 := start.Add(3 * time.Second)
 	time2 := time1.Add(10 * time.Second)
 
+	calendarMu := sync.Mutex{}
+	calendarMu.Lock()
 	calendar := fmt.Sprintf(`
 BEGIN:VCALENDAR
 
@@ -95,8 +135,11 @@ END:VEVENT
 
 END:VCALENDAR
 	`, time1.Format("20060102T150405"), time1.Format("20060102T150405"))
+	calendarMu.Unlock()
 
 	hs := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calendarMu.Lock()
+		defer calendarMu.Unlock()
 		io.WriteString(w, calendar)
 	}))
 
@@ -124,6 +167,7 @@ END:VCALENDAR
 		t.Errorf("Next event: got %q, want %q", nextEvent, "")
 	}
 
+	calendarMu.Lock()
 	calendar = fmt.Sprintf(`
 BEGIN:VCALENDAR
 
@@ -137,6 +181,7 @@ END:VEVENT
 
 END:VCALENDAR
 	`, time2.Format("20060102T150405"), time2.Format("20060102T150405"))
+	calendarMu.Unlock()
 
 	nextEvent = <-cal.NextEvent
 	log.Printf("Next event: %s", nextEvent)

@@ -21,8 +21,10 @@ type Calendar struct {
 	NextEvent     chan string
 	StartingEvent chan string
 
-	wgGet     sync.WaitGroup
-	stopGet   chan struct{}
+	wgGet   sync.WaitGroup
+	stopGet chan struct{}
+
+	muTimer   sync.Mutex
 	wgTimer   sync.WaitGroup
 	stopTimer chan struct{}
 }
@@ -118,6 +120,9 @@ func (c *Calendar) parse(r io.Reader) error {
 
 	// TODO: add 'morning' timer ("Events tonight: ...")
 
+	c.muTimer.Lock()
+	defer c.muTimer.Unlock()
+
 	if c.stopTimer != nil {
 		close(c.stopTimer)
 		c.wgTimer.Wait()
@@ -155,8 +160,12 @@ func (c *Calendar) timerLoop(events []gocal.Event) {
 			return
 		}
 
+		c.muTimer.Lock()
+		stopTimer := c.stopTimer
+		c.muTimer.Unlock()
+
 		select {
-		case <-c.stopTimer:
+		case <-stopTimer:
 			log.Printf("Timer loop stopping")
 			return
 		case <-c.Clock.After(events[i].Start.Sub(now)):
@@ -170,8 +179,11 @@ func (c *Calendar) timerLoop(events []gocal.Event) {
 }
 
 func (c *Calendar) Close() {
+	c.muTimer.Lock()
 	close(c.stopTimer)
+	c.muTimer.Unlock()
 	c.wgTimer.Wait()
+
 	close(c.stopGet)
 	c.wgGet.Wait()
 }
