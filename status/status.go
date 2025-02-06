@@ -248,7 +248,7 @@ func (ss *SWITCHSTATE) SendMessage(irccon *irc.Connection, nc *http.Client, text
 	}
 }
 
-func (ss SWITCHSTATE) CloseSwitchStatus() {
+func (ss *SWITCHSTATE) CloseSwitchStatus() {
 	ss.once.Do(func() {
 		ss.calendar.Close()
 		close(ss.ChStop)
