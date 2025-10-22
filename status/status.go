@@ -78,7 +78,7 @@ OuterLoop:
 				var cmnd string
 				if status {
 					strStatus = "OPEN"
-					cmnd = "On"
+					cmnd = "on"
 				} else {
 					strStatus = "CLOSED"
 					cmnd = "off"
@@ -127,7 +127,7 @@ OuterLoop:
 
 				// Blinker
 				if configuration.Blinker != "" {
-					resp, err = nc.Get(configuration.Blinker + "cm?cmnd=Power%20" + cmnd)
+					resp, err = nc.Post(configuration.Blinker+"light/blinker/turn_"+cmnd, "text/plain", strings.NewReader(""))
 					if err != nil {
 						log.Printf("Blinker error: %s\n", err)
 					} else {
