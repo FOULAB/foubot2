@@ -2,6 +2,7 @@ package ledsign
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -13,8 +14,12 @@ import (
 	"time"
 
 	"foubot2/configuration"
+
 	irc "github.com/thoj/go-ircevent"
 
+	meshtastic_go "github.com/exepirit/meshtastic-go/pkg/meshtastic"
+	meshtastic_go_http "github.com/exepirit/meshtastic-go/pkg/meshtastic/http"
+	meshtastic_proto "github.com/exepirit/meshtastic-go/pkg/meshtastic/proto"
 	"github.com/jonboulle/clockwork"
 	"github.com/mattermost/mattermost-server/v5/model"
 	rpio "github.com/stianeikeland/go-rpio/v4"
@@ -42,7 +47,8 @@ func GetSwitchStatus() (status bool) {
 func processStatus(ss *SWITCHSTATE, nc *http.Client, irccon *irc.Connection) {
 	var status bool
 
-	first := true
+	firstEvent := true
+	firstStatus := true
 
 	// If someone changes the topic manually, update our copy.
 	irccon.AddCallback("TOPIC", func(e *irc.Event) {
@@ -65,12 +71,21 @@ OuterLoop:
 
 			ss.UpdateTopic(irccon, nc, regexp.MustCompile(`\|\| Next event: (.*?) \|\|`), nextEvent)
 
+			// Meshtastic announcement (but not at startup, to avoid spam)
+			if !firstEvent {
+				ss.maybeSendMeshtastic(fmt.Sprintf("Next event: %s", nextEvent))
+			}
+
+			firstEvent = false
+
 		case startingEvent := <-ss.calendar.StartingEvent:
-			ss.SendMessage(irccon, nc, fmt.Sprintf("Starting event: %s", startingEvent))
+			text := fmt.Sprintf("Starting event: %s", startingEvent)
+			ss.SendMessage(irccon, nc, text)
+			ss.maybeSendMeshtastic(text)
 
 		default:
 			newStatus := GetSwitchStatus()
-			if first || status != newStatus {
+			if firstStatus || status != newStatus {
 				log.Printf("New status: %v\n", newStatus)
 				status = newStatus
 
@@ -88,8 +103,13 @@ OuterLoop:
 				ss.UpdateTopic(irccon, nc, regexp.MustCompile(`\|\| LAB (OPEN|CLOSED) \|\|`), strStatus)
 
 				// IRC announcement (but not at startup, to avoid spam)
-				if !first && configuration.TopicSendToChannel {
+				if !firstStatus && configuration.TopicSendToChannel {
 					irccon.Privmsg(BotChannel, fmt.Sprintf("|| LAB %s ||", strStatus))
+				}
+
+				// Meshtastic announcement (but not at startup, to avoid spam)
+				if !firstStatus {
+					ss.maybeSendMeshtastic(fmt.Sprintf("|| LAB %s ||", strStatus))
 				}
 
 				// GPIO
@@ -150,7 +170,7 @@ OuterLoop:
 					}
 				}
 			}
-			first = false
+			firstStatus = false
 			time.Sleep(time.Second)
 		}
 	}
@@ -244,6 +264,44 @@ func (ss *SWITCHSTATE) SendMessage(irccon *irc.Connection, nc *http.Client, text
 		post, resp := mm.CreatePost(post)
 		if post == nil {
 			log.Printf("Create post error: %+v", resp)
+		}
+	}
+}
+
+func (ss *SWITCHSTATE) maybeSendMeshtastic(text string) {
+	if configuration.Meshtastic != "" {
+		// Bypass NewConfiguredDevice, we don't want to fetch full device config on
+		// every message.
+		meshtastic := meshtastic_go.Device{
+			Transport: &meshtastic_go_http.Transport{
+				URL: "http://" + configuration.Meshtastic,
+				Client: http.Client{
+					Transport: &http.Transport{
+						// Keep this low, to minimize heap consumption on embedded ESP32 devices
+						// (eg. blinker, meshtastic)
+						IdleConnTimeout: 3 * time.Second,
+					},
+				},
+			},
+		}
+
+		packet := &meshtastic_proto.MeshPacket{
+			To:      meshtastic_go.BroadcastNodenum,
+			Channel: 0, // TODO: verify slot 0 is Role==PRIMARY
+			PayloadVariant: &meshtastic_proto.MeshPacket_Decoded{
+				Decoded: &meshtastic_proto.Data{
+					Portnum: meshtastic_proto.PortNum_TEXT_MESSAGE_APP,
+					Payload: []byte("[foulab.org] " + text),
+				}},
+			Priority: meshtastic_proto.MeshPacket_RELIABLE,
+			WantAck:  true,
+		}
+
+		err := meshtastic.SendToMesh(context.Background(), packet)
+		if err == nil {
+			log.Printf("Meshtastic: sent")
+		} else {
+			log.Printf("Meshtastic error: %s", err)
 		}
 	}
 }

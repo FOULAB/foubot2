@@ -27,3 +27,6 @@ const MattermostChannelId = ""
 
 // https://developers.mattermost.com/integrate/reference/personal-access-token/
 const MattermostToken = ""
+
+// If set, post lab status and event announcements to a local Meshtastic node.
+const Meshtastic = "esp32s3-38BCEC.lab"
