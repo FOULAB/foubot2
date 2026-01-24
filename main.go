@@ -9,9 +9,10 @@ import (
 
 	"crypto/tls"
 	"foubot2/configuration"
-	"foubot2/status"
-	irc "github.com/thoj/go-ircevent"
+	ledsign "foubot2/status"
 	"net"
+
+	irc "github.com/thoj/go-ircevent"
 )
 
 const botChannel = configuration.BotChannel
@@ -28,14 +29,6 @@ func handleMessages(event *irc.Event, irc *irc.Connection) {
 	}
 
 	command := strings.Split(event.Arguments[1], " ")[0]
-
-	if command == "!vox" && configuration.BotAutoVoice {
-		irc.Mode(botChannel, "+v", event.Nick)
-
-		irc.Privmsg(target, fmt.Sprintf("%sAlrity then!", prefix))
-
-		return
-	}
 
 	if command == "!status" {
 		status := ledsign.GetSwitchStatus()
@@ -58,27 +51,6 @@ func handleMessages(event *irc.Event, irc *irc.Connection) {
 		irc.Privmsg(target, fmt.Sprintf("%sVa?", prefix))
 		return
 	}
-}
-
-func handleJoin(event *irc.Event, irc *irc.Connection) {
-	go func() {
-		time.Sleep(time.Minute * 5)
-		irc.Mode(botChannel, "+v", event.Nick)
-	}()
-}
-
-func handleNick(event *irc.Event, irc *irc.Connection) {
-	go func() {
-		time.Sleep(time.Minute * 5)
-		irc.Mode(botChannel, "+v", event.Nick)
-	}()
-}
-
-func handlePart(event *irc.Event, irc *irc.Connection) {
-	go func() {
-		time.Sleep(time.Minute * 5)
-		irc.Mode(botChannel, "+v", event.Nick)
-	}()
 }
 
 func connectOnce() {
@@ -113,11 +85,6 @@ func connectOnce() {
 		button = ledsign.NewSwitchStatus(e.Arguments[2], irccon)
 	})
 	irccon.AddCallback("PRIVMSG", func(e *irc.Event) { handleMessages(e, irccon) })
-	if configuration.BotAutoVoice {
-		irccon.AddCallback("JOIN", func(e *irc.Event) { handleJoin(e, irccon) })
-		irccon.AddCallback("NICK", func(e *irc.Event) { handleNick(e, irccon) })
-		irccon.AddCallback("PART", func(e *irc.Event) { handlePart(e, irccon) })
-	}
 
 	// Do not use irccon.Loop() - it doesn't reconnect reliably when using SASL:
 	// https://github.com/thoj/go-ircevent/issues/112#issuecomment-2562001261

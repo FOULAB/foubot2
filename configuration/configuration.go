@@ -4,8 +4,6 @@ const BotChannel = "#foulab"
 const BotNick = "foubot"
 const BotPswd = "HAHAHAHAHA, nope."
 
-// Controls auto-voicing and the !vox command
-const BotAutoVoice = false
 const ServerTLS = "irc.libera.chat:6697"
 
 // Set topic through chanserv instead of directly, avoids
