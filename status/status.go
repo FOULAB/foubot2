@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"regexp"
@@ -140,7 +139,7 @@ OuterLoop:
 						log.Printf("StatusEndPoint error: %s\n", err)
 					} else {
 						log.Printf("StatusEndPoint: %s", resp.Status)
-						io.Copy(ioutil.Discard, resp.Body)
+						io.Copy(io.Discard, resp.Body)
 						resp.Body.Close()
 					}
 				}
@@ -152,7 +151,7 @@ OuterLoop:
 						log.Printf("Blinker error: %s\n", err)
 					} else {
 						log.Printf("Blinker: %s", resp.Status)
-						io.Copy(ioutil.Discard, resp.Body)
+						io.Copy(io.Discard, resp.Body)
 						resp.Body.Close()
 					}
 				}
@@ -165,7 +164,7 @@ OuterLoop:
 						log.Printf("Melody error: %s\n", err)
 					} else {
 						log.Printf("Melody: %s", resp.Status)
-						io.Copy(ioutil.Discard, resp.Body)
+						io.Copy(io.Discard, resp.Body)
 						resp.Body.Close()
 					}
 				}
