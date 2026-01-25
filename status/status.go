@@ -101,11 +101,6 @@ OuterLoop:
 				// IRC, Mattermost
 				ss.UpdateTopic(irccon, nc, regexp.MustCompile(`\|\| LAB (OPEN|CLOSED) \|\|`), strStatus)
 
-				// IRC announcement (but not at startup, to avoid spam)
-				if !firstStatus && configuration.TopicSendToChannel {
-					irccon.Privmsg(BotChannel, fmt.Sprintf("|| LAB %s ||", strStatus))
-				}
-
 				// Meshtastic announcement (but not at startup, to avoid spam)
 				if !firstStatus {
 					ss.maybeSendMeshtastic(fmt.Sprintf("|| LAB %s ||", strStatus))

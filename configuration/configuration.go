@@ -12,9 +12,6 @@ const ServerTLS = "irc.libera.chat:6697"
 // the need for the +o mode but requires chanserv flag +t
 const TopicUseChanserv = true
 
-// Whether to send status updates as normal messages along
-// with updating the topic
-const TopicSendToChannel = false
 const StatusEndPoint = "https://foulab.org/YTDMOWI3N2MXNMEZYWE4MGRHYTRLMZC4NJU5MJI2ZJYYODMYNME5NSAGLQO/"
 const Blinker = "http://blinker.lab/"
 
