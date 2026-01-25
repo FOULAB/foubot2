@@ -105,15 +105,15 @@ func connectOnce() {
 		irccon.Unlock()
 
 		irccon.Disconnect()
-		fmt.Printf("IRC disconnected\n")
+		log.Printf("IRC disconnected")
 	}()
 	if err != nil {
-		fmt.Printf("Connect error: %s\n", err)
+		log.Printf("Connect error: %s", err)
 		return
 	}
 
 	err = <-irccon.ErrorChan()
-	fmt.Printf("Error, disconnected: %s\n", err)
+	log.Printf("Error, disconnected: %s", err)
 }
 
 func main() {
